@@ -181,3 +181,7 @@ app.post('/admin/approve', requireAdminSecret, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log('CampusEdge server listening on', PORT));
+
+app.get('/', (req, res) => {
+  res.send('✅ CampusEdge Server is running successfully — Powered by Edge Incorporated Limited');
+});
