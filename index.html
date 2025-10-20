@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CampusEdge — Edge Incorporated Limited</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{--deep:#001F3F;--gold:#FFD700;}
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f7f9fc;color:#111}
+    header{background:var(--deep);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+    .logo{font-weight:700;font-size:18px}
+    .tag{font-size:12px;opacity:0.9}
+    .container{max-width:980px;margin:18px auto;padding:12px}
+    .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.04);margin-bottom:12px}
+    input,select,button,textarea{padding:8px;margin:6px 0;border:1px solid #e6e9f2;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box}
+    .btn{background:var(--gold);color:var(--deep);border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+    .small{font-size:13px;color:#666}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+    .flex{display:flex;gap:8px;align-items:center}
+    .sidebar{width:260px}
+    @media(max-width:800px){ .grid{grid-template-columns:1fr} .sidebar{width:100%} }
+    .badge{display:inline-block;padding:6px 8px;border-radius:6px;background:#eef4ff;color:var(--deep);font-weight:600}
+    footer{font-size:12px;color:#666;text-align:center;padding:12px;margin-top:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">CampusEdge</div>
+    <div class="tag">Edge Incorporated Limited</div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>CampusEdge — Edge Incorporated Limited</h2>
+      <p class="small">Empowering Students to Save Smart, Live Better.</p>
+      <div id="topButtons" class="flex"></div>
+    </div>
+
+    <div id="appArea"></div>
+
+    <div class="card">
+      <h4>Quick Info</h4>
+      <p class="small">Demo admin: <strong>admin@edge.com</strong> / <strong>1234</strong></p>
+      <p class="small">Demo agent: <strong>agent1@edge.com</strong> / <strong>1234</strong></p>
+    </div>
+
+  </div>
+
+  <footer>© 2025 Edge Incorporated Limited. All rights reserved.</footer>
+
+<script>
+// Single-file CampusEdge (Lite) - localStorage based
+(() => {
+  const PACKAGES = [
+    {id:"p1", name:"Indomie Super Pack", daily:150, days:129},
+    {id:"p2", name:"Others (Indomie Category)", daily:100, days:129},
+    {id:"p3", name:"Spaghetti Golden Penny", daily:180, days:129},
+    {id:"p4", name:"Others (Spaghetti Category)", daily:160, days:129},
+    {id:"p5", name:"Rice 10kg", daily:150, days:129},
+    {id:"p6", name:"Student Pot", daily:150, days:129},
+    {id:"p7", name:"Groundnut Oil 3 Litres", daily:120, days:129},
+    {id:"p8", name:"Savings (2 Weeks ₦750)", daily:null, days:null, cost:6375},
+    {id:"p9", name:"100 Daily (120 Days)", daily:100, days:120}
+  ];
+
+  const USERS_KEY = 'campusedge_users';
+  const PAY_KEY = 'campusedge_payments';
+
+  // seed demo data if empty
+  function seed(){
+    if(!localStorage.getItem(USERS_KEY)){
+      const demo = [
+        {id:'u_admin', role:'admin', name:'Edge Admin', username:'admin@edge.com', password:'1234'},
+        {id:'u_agent1', role:'agent', name:'Agent 1', username:'agent1@edge.com', password:'1234'},
+        {id:'s1', role:'student', name:'Alice Student', username:'alice@uni.edu', password:'pass1', packageId:'p1', agent:'Agent 1'},
+        {id:'s2', role:'student', name:'Bob Student', username:'bob@uni.edu', password:'pass2', packageId:'p2', agent:'Agent 1'},
+        {id:'s3', role:'student', name:'Clara Student', username:'clara@uni.edu', password:'pass3', packageId:'p9', agent:''}
+      ];
+      localStorage.setItem(USERS_KEY, JSON.stringify(demo));
+    }
+    if(!localStorage.getItem(PAY_KEY)){
+      const demoPayments = [
+        {id:'p1', studentId:'s1', date:'2025-10-01', amount:150, agent:'Agent 1'},
+        {id:'p2', studentId:'s1', date:'2025-10-02', amount:150, agent:'Agent 1'},
+        {id:'p3', studentId:'s2', date:'2025-10-02', amount:100, agent:'Agent 1'}
+      ];
+      localStorage.setItem(PAY_KEY, JSON.stringify(demoPayments));
+    }
+  }
+
+  function getUsers(){ return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
+  function saveUsers(u){ localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+  function getPayments(){ return JSON.parse(localStorage.getItem(PAY_KEY) || '[]'); }
+  function savePayments(p){ localStorage.setItem(PAY_KEY, JSON.stringify(p)); }
+
+  function computeTotals(){
+    const payments = getPayments();
+    const map = {};
+    payments.forEach(r => {
+      if(!map[r.studentId]) map[r.studentId] = {accum:0, days:0};
+      map[r.studentId].accum += Number(r.amount);
+      map[r.studentId].days += 1;
+    });
+    const users = getUsers().filter(u=>u.role==='student');
+    users.forEach(s => {
+      const pkg = PACKAGES.find(p=>p.id===s.packageId) || {};
+      const cost = pkg.cost ? pkg.cost : (pkg.daily && pkg.days ? pkg.daily * pkg.days : 0);
+      const entry = map[s.id] || {accum:0, days:0};
+      entry.packageCost = cost;
+      entry.status = (cost && entry.accum >= cost) ? 'Completed' : 'Still Paying';
+      map[s.id] = entry;
+    });
+    return map;
+  }
+
+  // render helpers
+  const root = document.getElementById('appArea');
+  const topButtons = document.getElementById('topButtons');
+
+  function clearRoot(){ root.innerHTML = ''; }
+  function renderHome(){
+    clearRoot();
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = '<h3>Welcome to CampusEdge</h3><p class="small">Students can self-register below. Agents and Admins can login to manage payments.</p>';
+    const actions = document.createElement('div'); actions.className='flex';
+    const loginBtn = document.createElement('button'); loginBtn.className='btn'; loginBtn.textContent='Login'; loginBtn.onclick = ()=>renderLogin();
+    const regBtn = document.createElement('button'); regBtn.className='btn'; regBtn.textContent='Student Register'; regBtn.onclick = ()=>renderRegister();
+    actions.appendChild(loginBtn); actions.appendChild(regBtn);
+    div.appendChild(actions);
+    root.appendChild(div);
+  }
+
+  function renderLogin(){
+    clearRoot();
+    const div = document.createElement('div'); div.className='card';
+    div.innerHTML = '<h3>Login</h3>';
+    const roleSel = document.createElement('select');
+    ['student','agent','admin'].forEach(r=>{ const o = document.createElement('option'); o.value=r; o.textContent = r.charAt(0).toUpperCase()+r.slice(1); roleSel.appendChild(o); });
+    const userInput = document.createElement('input'); userInput.placeholder='Username or email';
+    const passInput = document.createElement('input'); passInput.type='password'; passInput.placeholder='Password';
+    const submit = document.createElement('button'); submit.className='btn'; submit.textContent='Login';
+    submit.onclick = ()=>{
+      const role = roleSel.value; const user = userInput.value.trim(); const pass = passInput.value;
+      const found = getUsers().find(u=> (u.username===user || u.email===user) && u.password===pass && u.role===role);
+      if(!found){ alert('Invalid credentials'); return; }
+      renderPanel(found);
+    };
+    div.appendChild(roleSel); div.appendChild(userInput); div.appendChild(passInput); div.appendChild(submit);
+    root.appendChild(div);
+  }
+
+  function renderRegister(){
+    clearRoot();
+    const div = document.createElement('div'); div.className='card';
+    div.innerHTML = '<h3>Student Registration</h3>';
+    const name = document.createElement('input'); name.placeholder='Full name';
+    const email = document.createElement('input'); email.placeholder='Email (used to login)';
+    const pass = document.createElement('input'); pass.type='password'; pass.placeholder='Password';
+    const inst = document.createElement('input'); inst.placeholder='Institution (optional)';
+    const pkg = document.createElement('select'); PACKAGES.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; pkg.appendChild(o); });
+    const agent = document.createElement('input'); agent.placeholder='Agent name (optional)';
+    const submit = document.createElement('button'); submit.className='btn'; submit.textContent='Register';
+    submit.onclick = ()=>{
+      if(!name.value.trim()||!email.value.trim()||!pass.value){ alert('Name, email and password required'); return; }
+      const users = getUsers();
+      if(users.find(u=>u.username===email.value.trim()||u.email===email.value.trim())){ alert('User exists'); return; }
+      const newUser = {id:'u_'+Date.now(), role:'student', name:name.value.trim(), username:email.value.trim(), email:email.value.trim(), password:pass.value, packageId:pkg.value, agent:agent.value.trim()};
+      users.push(newUser); saveUsers(users);
+      alert('Registered. You are now logged in as '+newUser.name);
+      renderPanel(newUser);
+    };
+    div.appendChild(name); div.appendChild(email); div.appendChild(pass); div.appendChild(inst); div.appendChild(pkg); div.appendChild(agent); div.appendChild(submit);
+    root.appendChild(div);
+  }
+
+  function renderPanel(user){
+    clearRoot();
+    const totals = computeTotals();
+    // top buttons: logout and export
+    topButtons.innerHTML = '';
+    const logout = document.createElement('button'); logout.className='btn'; logout.textContent='Logout'; logout.onclick = ()=>{ topButtons.innerHTML=''; renderHome(); };
+    const exportBtn = document.createElement('button'); exportBtn.className='btn'; exportBtn.textContent='Export CSV'; exportBtn.style.marginLeft='8px';
+    exportBtn.onclick = ()=>{ const csv = buildCSV(); downloadFile(csv, 'CampusEdge_payments.csv'); };
+    topButtons.appendChild(logout); topButtons.appendChild(exportBtn);
+
+    const card = document.createElement('div'); card.className='card';
+    card.innerHTML = `<h3>${user.role.charAt(0).toUpperCase()+user.role.slice(1)} Dashboard</h3><div class="small">Hello ${user.name}</div>`;
+    // admin panel
+    if(user.role==='admin'){
+      const users = getUsers(); const students = users.filter(u=>u.role==='student');
+      const payments = getPayments();
+      const totalSaved = payments.reduce((a,b)=>a+Number(b.amount),0);
+      const completed = students.filter(s=> (totals[s.id] && totals[s.id].status==='Completed')).length;
+      const active = students.length - completed;
+      const stats = document.createElement('div'); stats.className='small'; stats.textContent = `Students: ${students.length} | Total Saved ₦${totalSaved} | Completed ${completed} | Active ${active}`;
+      card.appendChild(stats);
+      const tbl = document.createElement('table'); tbl.innerHTML = '<thead><tr><th>Name</th><th>Agent</th><th>Accumulated</th><th>Status</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      students.forEach(s=>{
+        const t = totals[s.id] || {accum:0, days:0, status:'Still Paying'};
+        const tr = document.createElement('tr'); tr.innerHTML = `<td>${s.name}</td><td>${s.agent||''}</td><td>₦${t.accum}</td><td>${t.status}</td>`;
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody); card.appendChild(tbl);
+    }
+
+    // agent panel
+    if(user.role==='agent'){
+      const users = getUsers(); const myStudents = users.filter(u=>u.role==='student' && (u.agent===user.name || !u.agent));
+      const tbl = document.createElement('table'); tbl.innerHTML = '<thead><tr><th>Name</th><th>Accumulated</th><th>Status</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      myStudents.forEach(s=>{
+        const t = totals[s.id] || {accum:0, days:0, status:'Still Paying'};
+        const tr = document.createElement('tr'); tr.innerHTML = `<td>${s.name}</td><td>₦${t.accum}</td><td>${t.status}</td>`;
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody); card.appendChild(tbl);
+      // quick payment UI
+      const payDiv = document.createElement('div'); payDiv.style.marginTop='12px';
+      const sel = document.createElement('select'); myStudents.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.name; sel.appendChild(o); });
+      const amt = document.createElement('input'); amt.placeholder='Amount (₦)'; amt.type='number';
+      const btn = document.createElement('button'); btn.className='btn'; btn.textContent='Record Payment';
+      btn.onclick = ()=>{
+        if(!sel.value || !amt.value){ alert('Choose student and amount'); return; }
+        const date = new Date().toISOString().split('T')[0];
+        const payments = getPayments(); payments.push({id:'p_'+Date.now(), studentId:sel.value, date, amount:Number(amt.value), agent:user.name}); savePayments(payments);
+        alert('Payment recorded'); renderPanel(user);
+      };
+      payDiv.appendChild(sel); payDiv.appendChild(amt); payDiv.appendChild(btn); card.appendChild(payDiv);
+    }
+
+    // student panel
+    if(user.role==='student'){
+      const t = totals[user.id] || {accum:0, days:0, status:'Still Paying', packageCost:0};
+      const pkg = PACKAGES.find(p=>p.id===user.packageId) || {};
+      const pkgDiv = document.createElement('div'); pkgDiv.className='small'; pkgDiv.innerHTML = `Package: <strong>${pkg.name||'—'}</strong> • Goal: ₦${t.packageCost||'-'}`;
+      card.appendChild(pkgDiv);
+      const statDiv = document.createElement('div'); statDiv.className='small'; statDiv.textContent = `Accumulated: ₦${t.accum} | Payments: ${t.days} | Status: ${t.status}`;
+      card.appendChild(statDiv);
+      // add payment form
+      const amt = document.createElement('input'); amt.placeholder='Amount (₦)'; amt.type='number'; amt.value = pkg.daily || 0;
+      const payBtn = document.createElement('button'); payBtn.className='btn'; payBtn.textContent='Pay';
+      payBtn.onclick = ()=>{
+        if(!amt.value){ alert('Enter amount'); return; }
+        const payments = getPayments(); payments.push({id:'p_'+Date.now(), studentId:user.id, date:new Date().toISOString().split('T')[0], amount:Number(amt.value), agent:user.name}); savePayments(payments);
+        alert('Payment recorded'); renderPanel(user);
+      };
+      card.appendChild(amt); card.appendChild(payBtn);
+      // history table
+      const hist = document.createElement('table'); hist.innerHTML = '<thead><tr><th>Date</th><th>Amount</th><th>Agent</th></tr></thead>'; const hbody = document.createElement('tbody');
+      getPayments().filter(p=>p.studentId===user.id).sort((a,b)=>b.date.localeCompare(a.date)).forEach(p=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${p.date}</td><td>₦${p.amount}</td><td>${p.agent||''}</td>`; hbody.appendChild(tr); });
+      hist.appendChild(hbody); card.appendChild(hist);
+    }
+
+    root.appendChild(card);
+  }
+
+  function buildCSV(){
+    const payments = getPayments(); const users = getUsers();
+    const rows = payments.map(p=>{
+      const s = users.find(u=>u.id===p.studentId) || users.find(u=>u.username===p.studentId);
+      const pkg = s? PACKAGES.find(x=>x.id===s.packageId) : null;
+      return [p.date, s? s.name : p.studentId, p.studentId, p.agent||'', p.amount, pkg? pkg.name : ''];
+    });
+    return ['Date,StudentName,StudentID,Agent,Amount,Package', ...rows.map(r=>r.join(','))].join('\n');
+  }
+
+  function downloadFile(content, filename){
+    const blob = new Blob([content], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+  }
+
+  // init
+  seed();
+  renderHome();
+})();
+</script>
+</body>
+</html>

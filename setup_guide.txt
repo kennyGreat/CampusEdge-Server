@@ -1,0 +1,12 @@
+CampusEdge Single-Page Setup Guide (Short)
+
+1) GitHub Pages Deploy
+- Create repo CampusEdgeWebApp, upload index.html, enable Pages.
+
+2) To enable Google Sheets logging (optional)
+- Create a Google Sheet and Apps Script to accept POST requests and append rows.
+- Use Apps Script web app URL in a secure server function; do not expose keys on client.
+
+3) Termii SMS (optional)
+- Create Termii account and obtain API key and Sender ID (EDGEINC).
+- For security, create a small server endpoint that receives payment events and calls Termii API.
